@@ -1,0 +1,205 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customers</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+<body onload="loadCustomers()">
+
+<!-- TOP BAR -->
+<header class="topbar">
+    <div class="left">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+    </div>
+    <div class="center">
+        <h1 class="header"></h1>
+    </div>
+    <div class="right">
+        <button onclick="toggle()" id="userDisplay">{{ username }}</button>
+    </div>
+</header>
+
+<!-- USER POPUP -->
+<div class="user-popup" id="userPopup">
+    <div style="padding:10px 14px;border-bottom:1px solid var(--border);margin-bottom:6px;">
+        <div style="font-weight:600;color:var(--text);" id="popupUsername">{{ username }}</div>
+        <div style="font-size:0.78rem;color:var(--muted);text-transform:capitalize;" id="userRoleDisplay">{{ role }}</div>
+    </div>
+    <button onclick="logout()">🚪 Logout</button>
+</div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+    <div class="logo">HotelMS</div>
+    <div class="sidebar-role">{{ role|upper }}</div>
+    <a href="{% url 'dashboard' %}">🏠 Dashboard</a>
+    <a href="{% url 'booking' %}">📅 Bookings</a>
+    <a href="{% url 'rooms' %}">🛏 Rooms</a>
+    <a href="{% url 'customers' %}">👥 Customers</a>
+    <a href="{% url 'payments' %}">💳 Payments</a>
+    {% if role == 'admin' or role == 'manager' %}
+    <a href="{% url 'settings' %}">⚙️ Settings</a>
+    {% endif %}
+    {% if role == 'admin' %}
+    <a href="{% url 'users' %}">👤 Manage Users</a>
+    {% endif %}
+</aside>
+
+<!-- MAIN -->
+<main class="main-content" id="mainContent">
+
+    <div class="page-header">
+        <h2>Customers Management</h2>
+        <p>Manage and view all hotel customers</p>
+    </div>
+
+    <!-- STAT CARDS -->
+    <section class="cards">
+        <div class="card blue">
+            <h3>Total Customers</h3>
+            <p id="totalCustomers">0</p>
+        </div>
+        <div class="card green">
+            <h3>Active Bookings</h3>
+            <p id="activeBookings">0</p>
+        </div>
+        <div class="card orange">
+            <h3>Total Revenue</h3>
+            <p id="totalRevenue">0</p>
+        </div>
+        <div class="card purple">
+            <h3>Avg. Rating</h3>
+            <p id="avgRating">0</p>
+        </div>
+    </section>
+
+    <!-- ADD CUSTOMER FORM -->
+    <div class="box large" style="margin-top: 20px;">
+        <h3>Add New Customer</h3>
+        <div class="grid-layout">
+            <div>
+                <label>First Name</label>
+                <input type="text" id="newFirstName" placeholder="First name">
+            </div>
+            <div>
+                <label>Last Name</label>
+                <input type="text" id="newLastName" placeholder="Last name">
+            </div>
+            <div>
+                <label>Email</label>
+                <input type="email" id="newEmail" placeholder="Email address">
+            </div>
+            <div>
+                <label>Phone</label>
+                <input type="text" id="newPhone" placeholder="Phone number">
+            </div>
+            <div>
+                <label>Country</label>
+                <input type="text" id="newCountry" placeholder="Country">
+            </div>
+            <div>
+                <label>Address</label>
+                <input type="text" id="newAddress" placeholder="Address">
+            </div>
+        </div>
+        <button type="button" onclick="addCustomer()" style="margin-top: 15px; max-width: 200px;">
+            Add Customer
+        </button>
+    </div>
+
+    <!-- SEARCH + TABLE -->
+    <div class="box large" style="margin-top: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 style="margin: 0;">All Customers</h3>
+            <input type="text" id="customerSearch" placeholder="Search by name or email..."
+                   oninput="searchCustomers()" style="width: 260px;">
+        </div>
+        <table id="customersTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Country</th>
+                    <th>Bookings</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="6" style="text-align:center;">Loading customers...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</main>
+
+<!-- CUSTOMER DETAIL MODAL -->
+<div class="modal-overlay" id="customerModal" style="display:none;" onclick="if(event.target===this) closeCustomerModal()">
+    <div class="modal-box" style="width: 460px;">
+        <button class="modal-close" onclick="closeCustomerModal()">
+            <i class='bx bx-x'></i>
+        </button>
+        <h2 id="modalCustomerName">Customer Details</h2>
+        <p class="subtitle" id="modalCustomerEmail"></p>
+        <div id="modalCustomerBody" style="text-align: left; margin-top: 16px;"></div>
+    </div>
+</div>
+
+<!-- EDIT CUSTOMER MODAL -->
+<div class="modal-overlay" id="editCustomerModal" style="display:none;" onclick="if(event.target===this) closeEditCustomerModal()">
+    <div class="modal-box" style="width: 440px;">
+        <button class="modal-close" onclick="closeEditCustomerModal()"><i class='bx bx-x'></i></button>
+        <h2>Edit Customer</h2>
+        <p class="subtitle" id="editCustomerSubtitle">Update customer details</p>
+        <input type="hidden" id="editCustomerId">
+        <div class="form-grid">
+            <div>
+                <label>First Name</label>
+                <input type="text" id="editFirstName" placeholder="First name">
+            </div>
+            <div>
+                <label>Last Name</label>
+                <input type="text" id="editLastName" placeholder="Last name">
+            </div>
+            <div>
+                <label>Email</label>
+                <input type="email" id="editEmail" placeholder="Email">
+            </div>
+            <div>
+                <label>Phone</label>
+                <input type="text" id="editPhone" placeholder="Phone">
+            </div>
+            <div>
+                <label>Country</label>
+                <input type="text" id="editCountry" placeholder="Country">
+            </div>
+            <div>
+                <label>City</label>
+                <input type="text" id="editCity" placeholder="City">
+            </div>
+            <div class="full-width">
+                <label>Address</label>
+                <input type="text" id="editAddress" placeholder="Address">
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn-cancel" onclick="closeEditCustomerModal()">Cancel</button>
+            <button type="button" onclick="saveCustomerEdit()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<footer>© 2026 Hotel Management System</footer>
+
+<script src="{% static 'script.js' %}"></script>
+</body>
+</html>

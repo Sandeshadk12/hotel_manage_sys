@@ -1,0 +1,258 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payments</title>
+<link rel="stylesheet" href="{% static 'style.css' %}">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+<body onload="loadPayments()">
+
+<!-- TOPBAR -->
+<header class="topbar">
+    <div class="left"><button class="menu-btn" onclick="toggleSidebar()">☰</button></div>
+    <div class="center"><h1 class="header"></h1></div>
+    <div class="right"><button onclick="toggle()" id="userDisplay">{{ username }}</button></div>
+</header>
+
+<!-- USER POPUP -->
+<div class="user-popup" id="userPopup">
+    <div class="popup-header">
+        <div class="popup-name" id="popupUsername">{{ username }}</div>
+        <div class="popup-role" id="userRoleDisplay">{{ role }}</div>
+    </div>
+    <button onclick="logout()">🚪 Logout</button>
+</div>
+
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+    <div class="logo">HotelMS</div>
+    <div class="sidebar-role">{{ role|upper }}</div>
+    <a href="{% url 'dashboard' %}">🏠 Dashboard</a>
+    <a href="{% url 'booking' %}">📅 Bookings</a>
+    <a href="{% url 'rooms' %}">🛏 Rooms</a>
+    <a href="{% url 'customers' %}">👥 Customers</a>
+    <a href="{% url 'payments' %}" class="active">💳 Payments</a>
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'housekeeping' %}">🧹 Housekeeping</a>
+    <a href="{% url 'complaints' %}">📢 Complaints</a>
+    <a href="{% url 'maintenance' %}">🔧 Maintenance</a>
+    <a href="{% url 'reviews' %}">⭐ Reviews</a>
+    <a href="{% url 'services' %}">🛎 Services</a>
+    {% if role == 'admin' or role == 'manager' %}
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'staff' %}">👔 Staff</a>
+    <a href="{% url 'settings' %}">⚙️ Settings</a>
+    {% endif %}
+    {% if role == 'admin' %}
+    <a href="{% url 'users' %}">👤 Manage Users</a>
+    {% endif %}
+</aside>
+
+<main class="main-content" id="mainContent">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h2>Payments</h2>
+            <p>Track and process guest payments</p>
+        </div>
+        <div class="page-header-actions">
+            <button onclick="window.print()" class="secondary">🖨 Print Report</button>
+        </div>
+    </div>
+
+    <section class="cards">
+        <div class="card blue"><div class="card-icon">💳</div><h3>Total Payments</h3><p id="totalPaymentsCount">0</p></div>
+        <div class="card green"><div class="card-icon">✅</div><h3>Completed</h3><p id="completedPaymentsCount">0</p></div>
+        <div class="card orange"><div class="card-icon">⏳</div><h3>Pending</h3><p id="pendingPaymentsCount">0</p></div>
+        <div class="card purple"><div class="card-icon">💰</div><h3>Total Revenue</h3><p id="totalRevenueCount">0</p></div>
+    </section>
+
+    <div class="grid">
+
+        <!-- PAYMENTS TABLE -->
+        <div class="box large">
+            <h3>Recent Payments</h3>
+            <div class="table-wrapper">
+                <table id="paymentsTable">
+                    <thead>
+                        <tr>
+                            <th>Guest</th><th>Booking</th><th>Amount</th>
+                            <th>Method</th><th>Date</th><th>Status</th><th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="7" style="text-align:center;padding:var(--sp-8);opacity:.5;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PAYMENT SUMMARY -->
+        <div class="box large">
+            <h3>Payment Summary</h3>
+            <div class="progress">
+                <div class="progress-label"><span>Completed</span><strong id="completedPaymentsPercent">0</strong>%</div>
+                <div class="bar"><div id="completedPaymentsBar" style="width:0%"></div></div>
+            </div>
+            <div class="progress">
+                <div class="progress-label"><span>Pending</span><strong id="pendingPaymentsPercent">0</strong>%</div>
+                <div class="bar yellow"><div id="pendingPaymentsBar" style="width:0%"></div></div>
+            </div>
+            <div class="progress">
+                <div class="progress-label"><span>Failed</span><strong id="failedPaymentsPercent">0</strong>%</div>
+                <div class="bar red"><div id="failedPaymentsBar" style="width:0%"></div></div>
+            </div>
+        </div>
+
+        <div class="box">
+            <h3>Quick Actions</h3>
+            <div style="display:flex;flex-direction:column;gap:var(--sp-2);margin-top:var(--sp-2);">
+                <button onclick="redirectTo('booking')">+ New Booking</button>
+                <button onclick="redirectTo('customers')" class="secondary">View Customers</button>
+            </div>
+        </div>
+
+        <div class="box">
+            <h3>Notes</h3>
+            <p>💡 Pending payments require action before check-out.</p>
+            <p style="margin-top:var(--sp-2);">✔ Completed payments are final and recorded.</p>
+            <p style="margin-top:var(--sp-2);">🔄 Cancelled bookings are auto-refunded.</p>
+        </div>
+    </div>
+
+</main>
+
+<footer>© 2026 Hotel Management System</footer>
+
+<!-- PAYMENT MODAL -->
+<div class="modal-overlay" id="paymentModal">
+    <div class="modal-box payment-modal-box" style="position:relative;">
+        <button class="modal-close" onclick="closePaymentModal()"><i class='bx bx-x'></i></button>
+
+        <!-- STEP 1: Choose Method -->
+        <div id="payStep1">
+            <h2>💳 Process Payment</h2>
+            <div class="pay-info-bar" id="payInfoBar"></div>
+            <p style="margin-top:var(--sp-4);color:var(--text-secondary);font-size:13px;">Select payment method:</p>
+            <div class="pay-method-grid">
+                <div class="pay-method-card" onclick="selectMethod('cash')">
+                    <div class="pay-method-icon">💵</div>
+                    <div class="pay-method-label">Cash</div>
+                    <div class="pay-method-sub">Physical currency</div>
+                </div>
+                <div class="pay-method-card" onclick="selectMethod('online')">
+                    <div class="pay-method-icon">🌐</div>
+                    <div class="pay-method-label">Online</div>
+                    <div class="pay-method-sub">Digital payment</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2A: Cash -->
+        <div id="payStep2Cash" style="display:none;">
+            <button class="pay-back-btn" onclick="goBackToStep1()"><i class='bx bx-arrow-back'></i> Back</button>
+            <h2>💵 Cash Payment</h2>
+            <div class="pay-info-bar" id="payInfoBarCash"></div>
+            <div class="cash-amount-display">
+                <div class="cash-amount-label">Amount Due</div>
+                <div class="cash-amount-value" id="cashAmountDue">0.00</div>
+            </div>
+            <label>Cash Received</label>
+            <input type="number" id="cashReceived" placeholder="Enter amount received" oninput="calculateChange()" min="0" step="0.01">
+            <div class="change-display" id="changeDisplay" style="display:none;">
+                <div class="change-row"><span>Amount Due:</span><span id="changeDue">0.00</span></div>
+                <div class="change-row"><span>Cash Received:</span><span id="changeReceived">0.00</span></div>
+                <div class="change-row change-highlight"><span>Change to Return:</span><span id="changeReturn">0.00</span></div>
+            </div>
+            <div class="modal-actions" style="margin-top:var(--sp-5);">
+                <button class="btn-cancel" onclick="closePaymentModal()">Cancel</button>
+                <button onclick="confirmCashPayment()" id="confirmCashBtn" disabled class="success">✓ Confirm Payment</button>
+            </div>
+        </div>
+
+        <!-- STEP 2B: Online -->
+        <div id="payStep2Online" style="display:none;">
+            <button class="pay-back-btn" onclick="goBackToStep1()"><i class='bx bx-arrow-back'></i> Back</button>
+            <h2>🌐 Online Payment</h2>
+            <div class="pay-info-bar" id="payInfoBarOnline"></div>
+            <p style="margin-top:var(--sp-3);font-size:13px;color:var(--text-secondary);">Select payment gateway:</p>
+
+            <div class="gateway-section-title">📱 Digital Wallets</div>
+            <div class="gateway-grid">
+                <div class="gateway-card" onclick="selectGateway('eSewa')"      data-gw="eSewa">     <div class="gw-color esewa"></div>eSewa</div>
+                <div class="gateway-card" onclick="selectGateway('Khalti')"     data-gw="Khalti">    <div class="gw-color khalti"></div>Khalti</div>
+                <div class="gateway-card" onclick="selectGateway('IME Pay')"    data-gw="IME Pay">   <div class="gw-color imepay"></div>IME Pay</div>
+                <div class="gateway-card" onclick="selectGateway('Fonepay')"    data-gw="Fonepay">   <div class="gw-color fonepay"></div>Fonepay</div>
+                <div class="gateway-card" onclick="selectGateway('ConnectIPS')" data-gw="ConnectIPS"><div class="gw-color connectips"></div>ConnectIPS</div>
+                <div class="gateway-card" onclick="selectGateway('nPay')"       data-gw="nPay">      <div class="gw-color npay"></div>nPay</div>
+            </div>
+
+            <div class="gateway-section-title">🏦 Bank Transfer</div>
+            <div class="gateway-grid">
+                <div class="gateway-card" onclick="selectGateway('NIC Asia Bank')"  data-gw="NIC Asia Bank"> <div class="gw-color nicasia"></div>NIC Asia</div>
+                <div class="gateway-card" onclick="selectGateway('Nabil Bank')"     data-gw="Nabil Bank">    <div class="gw-color nabil"></div>Nabil</div>
+                <div class="gateway-card" onclick="selectGateway('Global IME Bank')" data-gw="Global IME Bank"><div class="gw-color globalime"></div>Global IME</div>
+                <div class="gateway-card" onclick="selectGateway('Everest Bank')"   data-gw="Everest Bank">  <div class="gw-color everest"></div>Everest</div>
+                <div class="gateway-card" onclick="selectGateway('Kumari Bank')"    data-gw="Kumari Bank">   <div class="gw-color kumari"></div>Kumari</div>
+                <div class="gateway-card" onclick="selectGateway('Sanima Bank')"    data-gw="Sanima Bank">   <div class="gw-color sanima"></div>Sanima</div>
+            </div>
+
+            <div id="transactionSection" style="display:none;margin-top:var(--sp-4);">
+                <label>Transaction ID / Reference No.</label>
+                <input type="text" id="transactionId" placeholder="e.g. TXN123456789" oninput="validateTransactionId()">
+                <div class="txn-hint" id="txnHint"></div>
+            </div>
+            <div class="modal-actions" style="margin-top:var(--sp-5);">
+                <button class="btn-cancel" onclick="closePaymentModal()">Cancel</button>
+                <button onclick="confirmOnlinePayment()" id="confirmOnlineBtn" disabled class="success">✓ Confirm Payment</button>
+            </div>
+        </div>
+
+        <!-- STEP 3: Receipt -->
+        <div id="payStep3Receipt" style="display:none;">
+            <div class="receipt-box" id="receiptContent">
+                <div class="receipt-header">
+                    <div class="receipt-logo">🏨 HotelMS</div>
+                    <div class="receipt-title">Payment Receipt</div>
+                    <div class="receipt-subtitle" id="receiptDate"></div>
+                </div>
+                <div class="receipt-divider"></div>
+                <div class="receipt-row"><span>Guest Name</span><span id="rGuestName">—</span></div>
+                <div class="receipt-row"><span>Payment ID</span><span id="rPaymentId">—</span></div>
+                <div class="receipt-row"><span>Method</span><span id="rMethod">—</span></div>
+                <div class="receipt-row" id="rTxnRow" style="display:none;"><span>Transaction ID</span><span id="rTxnId">—</span></div>
+                <div class="receipt-divider"></div>
+                <div class="receipt-row receipt-total"><span>Total Paid</span><span id="rAmount">0.00</span></div>
+                <div class="receipt-divider"></div>
+                <div class="receipt-status">✅ PAYMENT SUCCESSFUL</div>
+                <div class="receipt-footer">Thank you for staying with us!</div>
+            </div>
+            <div class="modal-actions" style="margin-top:var(--sp-4);">
+                <button onclick="closePaymentModal()" class="btn-cancel">Close</button>
+                <button onclick="printReceipt()">🖨 Print Receipt</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="confirm-overlay" id="confirmModal">
+    <div class="confirm-box">
+        <div class="confirm-icon" id="confirmIcon">⚠️</div>
+        <div class="confirm-title" id="confirmTitle">Are you sure?</div>
+        <div class="confirm-message" id="confirmMessage"></div>
+        <div class="confirm-actions">
+            <button type="button" class="confirm-btn-cancel" onclick="closeConfirm()">Cancel</button>
+            <button type="button" id="confirmOkBtn" onclick="executeConfirm()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'script.js' %}"></script>
+</body>
+</html>

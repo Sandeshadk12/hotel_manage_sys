@@ -1,0 +1,137 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Housekeeping</title>
+<link rel="stylesheet" href="{% static 'style.css' %}">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+<body onload="loadHousekeeping()">
+
+<!-- TOPBAR -->
+<header class="topbar">
+    <div class="left">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+    </div>
+    <div class="center"><h1 class="header"></h1></div>
+    <div class="right">
+        <button onclick="toggle()" id="userDisplay">{{ username }}</button>
+    </div>
+</header>
+
+<!-- USER POPUP -->
+<div class="user-popup" id="userPopup">
+    <div class="popup-header">
+        <div class="popup-name" id="popupUsername">{{ username }}</div>
+        <div class="popup-role" id="userRoleDisplay">{{ role }}</div>
+    </div>
+    <button onclick="logout()">🚪 Logout</button>
+</div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+    <div class="logo">HotelMS</div>
+    <div class="sidebar-role">{{ role|upper }}</div>
+    <a href="{% url 'dashboard' %}" >🏠 Dashboard</a>
+    <a href="{% url 'booking' %}"   >📅 Bookings</a>
+    <a href="{% url 'rooms' %}"     >🛏 Rooms</a>
+    <a href="{% url 'customers' %}" >👥 Customers</a>
+    <a href="{% url 'payments' %}"  >💳 Payments</a>
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'housekeeping' %}" class="active">🧹 Housekeeping</a>
+    <a href="{% url 'complaints' %}"  >📢 Complaints</a>
+    <a href="{% url 'maintenance' %}" >🔧 Maintenance</a>
+    <a href="{% url 'reviews' %}"     >⭐ Reviews</a>
+    <a href="{% url 'services' %}"    >🛎 Services</a>
+    {% if role == 'admin' or role == 'manager' %}
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'staff' %}"       >👔 Staff</a>
+    <a href="{% url 'settings' %}"    >⚙️ Settings</a>
+    {% endif %}
+    {% if role == 'admin' %}
+    <a href="{% url 'users' %}"       >👤 Manage Users</a>
+    {% endif %}
+</aside>
+
+<main class="main-content" id="mainContent">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h2>Housekeeping</h2>
+            <p>Track room cleaning sessions after guest checkouts</p>
+        </div>
+        <div class="page-header-actions">
+            <button type="button" class="secondary" onclick="loadHousekeeping()">↻ Refresh</button>
+        </div>
+    </div>
+
+    <section class="cards">
+        <div class="card orange"><div class="card-icon">⏳</div><h3>Pending</h3><p id="pendingCount">0</p></div>
+        <div class="card blue"><div class="card-icon">🔄</div><h3>In Progress</h3><p id="inProgressCount">0</p></div>
+        <div class="card green"><div class="card-icon">✅</div><h3>Completed Today</h3><p id="completedTodayCount">0</p></div>
+    </section>
+
+    <div class="filter-bar">
+        <button type="button" id="filterAll"       onclick="filterHousekeeping('')"           class="filter-btn active">All</button>
+        <button type="button" id="filterPending"   onclick="filterHousekeeping('Pending')"    class="filter-btn">⏳ Pending</button>
+        <button type="button" id="filterProgress"  onclick="filterHousekeeping('In Progress')" class="filter-btn">🔄 In Progress</button>
+        <button type="button" id="filterCompleted" onclick="filterHousekeeping('Completed')"  class="filter-btn">✅ Completed</button>
+    </div>
+
+    <div class="box">
+        <h3>Cleaning Tasks</h3>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Room</th><th>Type</th><th>Floor</th><th>Last Guest</th>
+                        <th>Queued At</th><th>Status</th><th>Notes</th><th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="cleaningTableBody">
+                    <tr><td colspan="8" style="text-align:center;padding:var(--sp-8);opacity:.5;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<footer>© 2026 Hotel Management System</footer>
+
+<div class="modal-overlay" id="notesModal" onclick="if(event.target===this) closeNotesModal()">
+    <div class="modal-box" style="width:440px;">
+        <button class="modal-close" onclick="closeNotesModal()"><i class='bx bx-x'></i></button>
+        <h2>Cleaning Update</h2>
+        <p class="subtitle" id="notesModalSubtitle">Add notes for the room</p>
+        <input type="hidden" id="notesCleaningId">
+        <input type="hidden" id="notesTargetStatus">
+        <label>Notes / Instructions</label>
+        <textarea id="cleaningNotes" rows="4" placeholder="e.g. deep clean requested, stain on carpet..."></textarea>
+        <div class="modal-actions">
+            <button type="button" class="btn-cancel" onclick="closeNotesModal()">Cancel</button>
+            <button type="button" id="notesConfirmBtn" onclick="confirmStatusUpdate()">Confirm</button>
+        </div>
+    </div>
+</div>
+<!-- CONFIRM MODAL -->
+<div class="confirm-overlay" id="confirmModal">
+    <div class="confirm-box">
+        <div class="confirm-icon" id="confirmIcon">⚠️</div>
+        <div class="confirm-title" id="confirmTitle">Are you sure?</div>
+        <div class="confirm-message" id="confirmMessage"></div>
+        <div class="confirm-actions">
+            <button type="button" class="confirm-btn-cancel" onclick="closeConfirm()">Cancel</button>
+            <button type="button" id="confirmOkBtn" onclick="executeConfirm()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'script.js' %}"></script>
+</body>
+</html>

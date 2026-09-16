@@ -1,0 +1,118 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Staff</title>
+<link rel="stylesheet" href="{% static 'style.css' %}">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+<body onload="loadStaff()">
+
+<!-- TOPBAR -->
+<header class="topbar">
+    <div class="left">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+    </div>
+    <div class="center"><h1 class="header"></h1></div>
+    <div class="right">
+        <button onclick="toggle()" id="userDisplay">{{ username }}</button>
+    </div>
+</header>
+
+<!-- USER POPUP -->
+<div class="user-popup" id="userPopup">
+    <div class="popup-header">
+        <div class="popup-name" id="popupUsername">{{ username }}</div>
+        <div class="popup-role" id="userRoleDisplay">{{ role }}</div>
+    </div>
+    <button onclick="logout()">🚪 Logout</button>
+</div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+    <div class="logo">HotelMS</div>
+    <div class="sidebar-role">{{ role|upper }}</div>
+    <a href="{% url 'dashboard' %}" >🏠 Dashboard</a>
+    <a href="{% url 'booking' %}"   >📅 Bookings</a>
+    <a href="{% url 'rooms' %}"     >🛏 Rooms</a>
+    <a href="{% url 'customers' %}" >👥 Customers</a>
+    <a href="{% url 'payments' %}"  >💳 Payments</a>
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'housekeeping' %}" >🧹 Housekeeping</a>
+    <a href="{% url 'complaints' %}"  >📢 Complaints</a>
+    <a href="{% url 'maintenance' %}" >🔧 Maintenance</a>
+    <a href="{% url 'reviews' %}"     >⭐ Reviews</a>
+    <a href="{% url 'services' %}"    >🛎 Services</a>
+    {% if role == 'admin' or role == 'manager' %}
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'staff' %}"       class="active">👔 Staff</a>
+    <a href="{% url 'settings' %}"    >⚙️ Settings</a>
+    {% endif %}
+    {% if role == 'admin' %}
+    <a href="{% url 'users' %}"       >👤 Manage Users</a>
+    {% endif %}
+</aside>
+
+<main class="main-content" id="mainContent">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h2>Staff</h2>
+            <p>Hotel staff members and employee records</p>
+        </div>
+    </div>
+
+    <section class="cards">
+        <div class="card blue"><div class="card-icon">👔</div><h3>Total Staff</h3><p id="staffTotal">0</p></div>
+        <div class="card green"><div class="card-icon">✅</div><h3>Active</h3><p id="staffActive">0</p></div>
+        <div class="card red"><div class="card-icon">⏸</div><h3>Inactive</h3><p id="staffInactive">0</p></div>
+    </section>
+
+    <div class="box">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--sp-3);margin-bottom:var(--sp-4);">
+            <h3 style="margin:0;">Staff Members</h3>
+            <div class="search-input-wrapper">
+                <input type="text" id="staffSearch" placeholder="Search by name or position..." oninput="filterStaffTable()" style="width:240px;">
+            </div>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th><th>Employee ID</th><th>Position</th>
+                        <th>Department</th><th>Shift</th><th>Phone</th><th>Hire Date</th><th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="staffTableBody">
+                    <tr><td colspan="8" style="text-align:center;padding:var(--sp-8);opacity:.5;">Loading staff...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<footer>© 2026 Hotel Management System</footer>
+
+
+<!-- CONFIRM MODAL -->
+<div class="confirm-overlay" id="confirmModal">
+    <div class="confirm-box">
+        <div class="confirm-icon" id="confirmIcon">⚠️</div>
+        <div class="confirm-title" id="confirmTitle">Are you sure?</div>
+        <div class="confirm-message" id="confirmMessage"></div>
+        <div class="confirm-actions">
+            <button type="button" class="confirm-btn-cancel" onclick="closeConfirm()">Cancel</button>
+            <button type="button" id="confirmOkBtn" onclick="executeConfirm()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'script.js' %}"></script>
+</body>
+</html>

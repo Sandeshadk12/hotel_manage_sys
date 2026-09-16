@@ -1,0 +1,197 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bookings</title>
+<link rel="stylesheet" href="{% static 'style.css' %}">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+<body onload="loadBookings()">
+
+<!-- TOPBAR -->
+<header class="topbar">
+    <div class="left">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+    </div>
+    <div class="center"><h1 class="header"></h1></div>
+    <div class="right">
+        <button onclick="toggle()" id="userDisplay">{{ username }}</button>
+    </div>
+</header>
+
+<!-- USER POPUP -->
+<div class="user-popup" id="userPopup">
+    <div class="popup-header">
+        <div class="popup-name" id="popupUsername">{{ username }}</div>
+        <div class="popup-role" id="userRoleDisplay">{{ role }}</div>
+    </div>
+    <button onclick="logout()">🚪 Logout</button>
+</div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+    <div class="logo">HotelMS</div>
+    <div class="sidebar-role">{{ role|upper }}</div>
+    <a href="{% url 'dashboard' %}" >🏠 Dashboard</a>
+    <a href="{% url 'booking' %}"   class="active">📅 Bookings</a>
+    <a href="{% url 'rooms' %}"     >🛏 Rooms</a>
+    <a href="{% url 'customers' %}" >👥 Customers</a>
+    <a href="{% url 'payments' %}"  >💳 Payments</a>
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'housekeeping' %}" >🧹 Housekeeping</a>
+    <a href="{% url 'complaints' %}"  >📢 Complaints</a>
+    <a href="{% url 'maintenance' %}" >🔧 Maintenance</a>
+    <a href="{% url 'reviews' %}"     >⭐ Reviews</a>
+    <a href="{% url 'services' %}"    >🛎 Services</a>
+    {% if role == 'admin' or role == 'manager' %}
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'staff' %}"       >👔 Staff</a>
+    <a href="{% url 'settings' %}"    >⚙️ Settings</a>
+    {% endif %}
+    {% if role == 'admin' %}
+    <a href="{% url 'users' %}"       >👤 Manage Users</a>
+    {% endif %}
+</aside>
+
+<main class="main-content" id="mainContent">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h2>Bookings</h2>
+            <p>Create and manage hotel reservations</p>
+        </div>
+    </div>
+
+    <!-- NEW BOOKING FORM -->
+    <form class="box" onsubmit="createBooking(event)" style="margin-bottom:var(--sp-6);">
+        <h3>📋 New Booking</h3>
+        <div class="grid-layout" style="margin-top:var(--sp-4);">
+            <div class="card">
+                <h3>Guest Information</h3>
+                <label>Full Name *</label>
+                <input type="text" id="guestName" placeholder="Enter guest name" required>
+                <label>Email *</label>
+                <input type="email" id="guestEmail" placeholder="guest@email.com" onblur="lookupGuestByEmail()" required>
+                <p id="guestLookupStatus" class="subtitle" style="margin:6px 0 0;font-size:11px;"></p>
+                <label>Phone</label>
+                <input type="text" id="guestPhone" placeholder="Phone number">
+            </div>
+            <div class="card">
+                <h3>Room Details</h3>
+                <label>Room Type *</label>
+                <select id="roomType" onchange="loadRoomOptions(); updatePricePreview();" required>
+                    <option value="">Select type</option>
+                    <option>Single</option>
+                    <option>Double</option>
+                    <option>Deluxe</option>
+                    <option>Suite</option>
+                </select>
+                <label>Room Number *</label>
+                <select id="roomNumber" onchange="updatePricePreview()">
+                    <option value="">Select available room</option>
+                </select>
+                <label>Number of Guests</label>
+                <input type="number" id="guests" value="1" min="1" max="10">
+            </div>
+            <div class="card">
+                <h3>Check-in</h3>
+                <label>Date *</label>
+                <input type="date" id="checkIn" onchange="loadRoomOptions(); updatePricePreview();" required>
+                <label>Time <span style="font-weight:400;font-size:11px;text-transform:none;letter-spacing:0;">(optional)</span></label>
+                <input type="time" id="checkInTime">
+            </div>
+            <div class="card">
+                <h3>Check-out</h3>
+                <label>Date *</label>
+                <input type="date" id="checkOut" onchange="updatePricePreview();" required>
+                <label>Time <span style="font-weight:400;font-size:11px;text-transform:none;letter-spacing:0;">(optional)</span></label>
+                <input type="time" id="checkOutTime">
+            </div>
+            <div style="grid-column:span 2;">
+                <label>Special Requests / Notes</label>
+                <textarea id="bookingNotes" rows="2" placeholder="Any special requests or notes..."></textarea>
+            </div>
+        </div>
+        <div id="pricePreviewCard" style="display:none;margin-top:var(--sp-4);padding:var(--sp-4);background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);border-radius:var(--r-lg);">
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Estimated Cost</div>
+            <div id="pricePreview" style="font-size:22px;font-weight:700;color:var(--green);letter-spacing:-0.02em;"></div>
+        </div>
+        <div style="margin-top:var(--sp-5);display:flex;gap:var(--sp-3);">
+            <button type="submit" class="success" style="min-width:160px;">Create Booking</button>
+            <button type="button" class="secondary" onclick="this.closest('form').reset();document.getElementById('pricePreviewCard').style.display='none';">Clear</button>
+        </div>
+    </form>
+
+    <!-- BOOKINGS TABLE -->
+    <div class="box">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--sp-3);margin-bottom:var(--sp-4);">
+            <h3 style="margin:0;">All Bookings</h3>
+            <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;align-items:center;">
+                <div class="search-input-wrapper">
+                    <input type="text" id="bookingSearch" placeholder="Search ID or guest..." oninput="filterBookings()" style="width:200px;">
+                </div>
+                <select id="bookingStatusFilter" onchange="filterBookings()" style="width:150px;">
+                    <option value="">All Statuses</option>
+                    <option>Pending</option>
+                    <option>Confirmed</option>
+                    <option>Checked In</option>
+                    <option>Checked Out</option>
+                    <option>Cancelled</option>
+                </select>
+            </div>
+        </div>
+        <div class="table-wrapper">
+            <table id="bookingListTable">
+                <thead>
+                    <tr>
+                        <th>Booking ID</th>
+                        <th>Guest</th>
+                        <th>Room</th>
+                        <th>Check-in</th>
+                        <th>Check-out</th>
+                        <th>Price</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="8" style="text-align:center;padding:var(--sp-8);opacity:.5;">Loading bookings...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<footer>© 2026 Hotel Management System</footer>
+
+<!-- VIEW BOOKING MODAL -->
+<div class="modal-overlay" id="viewBookingModal" onclick="if(event.target===this) closeBookingModal()">
+    <div class="modal-box" style="width:500px;">
+        <button class="modal-close" onclick="closeBookingModal()"><i class='bx bx-x'></i></button>
+        <h2 id="modalBookingId">Booking Details</h2>
+        <p class="subtitle" id="modalBookingStatus"></p>
+        <div class="detail-grid" id="modalBookingBody"></div>
+    </div>
+</div>
+<!-- CONFIRM MODAL -->
+<div class="confirm-overlay" id="confirmModal">
+    <div class="confirm-box">
+        <div class="confirm-icon" id="confirmIcon">⚠️</div>
+        <div class="confirm-title" id="confirmTitle">Are you sure?</div>
+        <div class="confirm-message" id="confirmMessage"></div>
+        <div class="confirm-actions">
+            <button type="button" class="confirm-btn-cancel" onclick="closeConfirm()">Cancel</button>
+            <button type="button" id="confirmOkBtn" onclick="executeConfirm()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'script.js' %}"></script>
+</body>
+</html>

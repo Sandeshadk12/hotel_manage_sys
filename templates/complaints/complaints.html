@@ -1,0 +1,160 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Complaints</title>
+<link rel="stylesheet" href="{% static 'style.css' %}">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+<body onload="loadComplaints()">
+
+<!-- TOPBAR -->
+<header class="topbar">
+    <div class="left">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+    </div>
+    <div class="center"><h1 class="header"></h1></div>
+    <div class="right">
+        <button onclick="toggle()" id="userDisplay">{{ username }}</button>
+    </div>
+</header>
+
+<!-- USER POPUP -->
+<div class="user-popup" id="userPopup">
+    <div class="popup-header">
+        <div class="popup-name" id="popupUsername">{{ username }}</div>
+        <div class="popup-role" id="userRoleDisplay">{{ role }}</div>
+    </div>
+    <button onclick="logout()">🚪 Logout</button>
+</div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+    <div class="logo">HotelMS</div>
+    <div class="sidebar-role">{{ role|upper }}</div>
+    <a href="{% url 'dashboard' %}" >🏠 Dashboard</a>
+    <a href="{% url 'booking' %}"   >📅 Bookings</a>
+    <a href="{% url 'rooms' %}"     >🛏 Rooms</a>
+    <a href="{% url 'customers' %}" >👥 Customers</a>
+    <a href="{% url 'payments' %}"  >💳 Payments</a>
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'housekeeping' %}" >🧹 Housekeeping</a>
+    <a href="{% url 'complaints' %}"  class="active">📢 Complaints</a>
+    <a href="{% url 'maintenance' %}" >🔧 Maintenance</a>
+    <a href="{% url 'reviews' %}"     >⭐ Reviews</a>
+    <a href="{% url 'services' %}"    >🛎 Services</a>
+    {% if role == 'admin' or role == 'manager' %}
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'staff' %}"       >👔 Staff</a>
+    <a href="{% url 'settings' %}"    >⚙️ Settings</a>
+    {% endif %}
+    {% if role == 'admin' %}
+    <a href="{% url 'users' %}"       >👤 Manage Users</a>
+    {% endif %}
+</aside>
+
+<main class="main-content" id="mainContent">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h2>Complaints</h2>
+            <p>Track and resolve guest complaints</p>
+        </div>
+    </div>
+
+    <section class="cards">
+        <div class="card orange"><div class="card-icon">🔴</div><h3>Open</h3><p id="cntOpen">0</p></div>
+        <div class="card blue"><div class="card-icon">🔄</div><h3>In Progress</h3><p id="cntInProgress">0</p></div>
+        <div class="card green"><div class="card-icon">✅</div><h3>Resolved</h3><p id="cntResolved">0</p></div>
+        <div class="card purple"><div class="card-icon">📊</div><h3>Total</h3><p id="cntTotal">0</p></div>
+    </section>
+
+    <div class="box" style="margin-bottom:var(--sp-5);">
+        <h3>Log New Complaint</h3>
+        <div class="form-row" style="margin-top:var(--sp-4);">
+            <div>
+                <label>Booking ID *</label>
+                <input type="text" id="newBookingId" placeholder="e.g. BK-XXXXXXXX">
+            </div>
+            <div>
+                <label>Type</label>
+                <select id="newComplaintType">
+                    <option>Cleanliness</option><option>Noise</option>
+                    <option>Service</option><option>Facilities</option><option>Other</option>
+                </select>
+            </div>
+            <div class="span-2">
+                <label>Description *</label>
+                <textarea id="newComplaintDesc" rows="3" placeholder="Describe the issue in detail..."></textarea>
+            </div>
+        </div>
+        <button type="button" onclick="submitComplaint()" class="danger" style="margin-top:var(--sp-4);max-width:200px;">Submit Complaint</button>
+    </div>
+
+    <div class="box">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-4);">
+            <h3 style="margin:0;">All Complaints</h3>
+            <div class="filter-bar" style="margin:0;">
+                <button type="button" onclick="loadComplaints('')"            class="filter-btn">All</button>
+                <button type="button" onclick="loadComplaints('Open')"        class="filter-btn">Open</button>
+                <button type="button" onclick="loadComplaints('In Progress')" class="filter-btn">In Progress</button>
+                <button type="button" onclick="loadComplaints('Resolved')"    class="filter-btn">Resolved</button>
+                <button type="button" onclick="loadComplaints('Closed')"      class="filter-btn">Closed</button>
+            </div>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr><th>Booking</th><th>Guest</th><th>Type</th><th>Description</th><th>Status</th><th>Logged</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="complaintsTableBody">
+                    <tr><td colspan="7" style="text-align:center;padding:var(--sp-8);opacity:.5;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<footer>© 2026 Hotel Management System</footer>
+
+<div class="modal-overlay" id="resolveModal" onclick="if(event.target===this) closeResolveModal()">
+    <div class="modal-box" style="width:460px;">
+        <button class="modal-close" onclick="closeResolveModal()"><i class='bx bx-x'></i></button>
+        <h2>Update Complaint</h2>
+        <p class="subtitle" id="resolveModalSubtitle"></p>
+        <input type="hidden" id="resolveComplaintId">
+        <label>Status</label>
+        <select id="resolveStatus">
+            <option>Open</option><option>In Progress</option>
+            <option>Resolved</option><option>Closed</option>
+        </select>
+        <label>Resolution / Notes</label>
+        <textarea id="resolveText" rows="4" placeholder="Describe how the issue was resolved..."></textarea>
+        <div class="modal-actions">
+            <button type="button" class="btn-cancel" onclick="closeResolveModal()">Cancel</button>
+            <button type="button" class="success" onclick="saveComplaintUpdate()">Save Update</button>
+        </div>
+    </div>
+</div>
+<!-- CONFIRM MODAL -->
+<div class="confirm-overlay" id="confirmModal">
+    <div class="confirm-box">
+        <div class="confirm-icon" id="confirmIcon">⚠️</div>
+        <div class="confirm-title" id="confirmTitle">Are you sure?</div>
+        <div class="confirm-message" id="confirmMessage"></div>
+        <div class="confirm-actions">
+            <button type="button" class="confirm-btn-cancel" onclick="closeConfirm()">Cancel</button>
+            <button type="button" id="confirmOkBtn" onclick="executeConfirm()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'script.js' %}"></script>
+</body>
+</html>

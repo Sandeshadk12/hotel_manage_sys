@@ -1,0 +1,50 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Bulk Add Rooms | Admin{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a> &rsaquo;
+  <a href="{% url 'admin:app_list' app_label=opts.app_label %}">Resultapp</a> &rsaquo;
+  <a href="{% url 'admin:resultapp_room_changelist' %}">Rooms</a> &rsaquo;
+  Bulk Add Rooms
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>Bulk Add Rooms</h1>
+
+{% if messages %}
+<ul class="messagelist">
+  {% for message in messages %}
+  <li class="{{ message.tags }}">{{ message }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<div style="display:flex;gap:30px;flex-wrap:wrap;align-items:flex-start;">
+
+  <div class="module" style="flex:1;min-width:320px;max-width:500px;">
+    <form method="post">
+      {% csrf_token %}
+      <fieldset class="module aligned">
+        <h2>Room Details</h2>
+        {% for field in form %}
+        <div class="form-row{% if field.errors %} errors{% endif %}">
+          {{ field.label_tag }}
+          {{ field }}
+          {% for error in field.errors %}
+            <p class="errornote">{{ error }}</p>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </fieldset>
+      <div class="submit-row">
+        <input type="submit" value="Create Rooms" class="default">
+        <a href="{% url 'admin:resultapp_room_changelist' %}" style="margin-left:12px;">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,193 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rooms</title>
+<link rel="stylesheet" href="{% static 'style.css' %}">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+<body onload="loadRooms()">
+
+<!-- TOPBAR -->
+<header class="topbar">
+    <div class="left">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+    </div>
+    <div class="center"><h1 class="header"></h1></div>
+    <div class="right">
+        <button onclick="toggle()" id="userDisplay">{{ username }}</button>
+    </div>
+</header>
+
+<!-- USER POPUP -->
+<div class="user-popup" id="userPopup">
+    <div class="popup-header">
+        <div class="popup-name" id="popupUsername">{{ username }}</div>
+        <div class="popup-role" id="userRoleDisplay">{{ role }}</div>
+    </div>
+    <button onclick="logout()">🚪 Logout</button>
+</div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+    <div class="logo">HotelMS</div>
+    <div class="sidebar-role">{{ role|upper }}</div>
+    <a href="{% url 'dashboard' %}" >🏠 Dashboard</a>
+    <a href="{% url 'booking' %}"   >📅 Bookings</a>
+    <a href="{% url 'rooms' %}"     class="active">🛏 Rooms</a>
+    <a href="{% url 'customers' %}" >👥 Customers</a>
+    <a href="{% url 'payments' %}"  >💳 Payments</a>
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'housekeeping' %}" >🧹 Housekeeping</a>
+    <a href="{% url 'complaints' %}"  >📢 Complaints</a>
+    <a href="{% url 'maintenance' %}" >🔧 Maintenance</a>
+    <a href="{% url 'reviews' %}"     >⭐ Reviews</a>
+    <a href="{% url 'services' %}"    >🛎 Services</a>
+    {% if role == 'admin' or role == 'manager' %}
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'staff' %}"       >👔 Staff</a>
+    <a href="{% url 'settings' %}"    >⚙️ Settings</a>
+    {% endif %}
+    {% if role == 'admin' %}
+    <a href="{% url 'users' %}"       >👤 Manage Users</a>
+    {% endif %}
+</aside>
+
+<main class="main-content" id="mainContent">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h2>Rooms</h2>
+            <p>Manage all hotel rooms, availability and status</p>
+        </div>
+    </div>
+
+    <section class="cards">
+        <div class="card blue"><div class="card-icon">🏨</div><h3>Total Rooms</h3><p id="totalRooms">0</p></div>
+        <div class="card green"><div class="card-icon">✅</div><h3>Available</h3><p id="availableRooms">0</p></div>
+        <div class="card red"><div class="card-icon">🔴</div><h3>Occupied</h3><p id="occupiedRooms">0</p></div>
+        <div class="card yellow"><div class="card-icon">🧹</div><h3>Cleaning</h3><p id="cleaningRooms">0</p></div>
+        <div class="card orange"><div class="card-icon">🔧</div><h3>Maintenance</h3><p id="maintenanceRooms">0</p></div>
+    </section>
+
+    <div class="box" style="margin-bottom:var(--sp-5);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-4);">
+            <h3 style="margin:0;">Room List</h3>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr><th>Room No</th><th>Type</th><th>Floor</th><th>Status</th><th>Price/Night</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="roomTable">
+                    <tr><td colspan="6" style="text-align:center;padding:var(--sp-8);opacity:.5;">Loading rooms...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="grid">
+        <form class="box" onsubmit="addRoom(event)">
+            <h3>Add Single Room</h3>
+            <label>Room Number *</label>
+            <input type="text" id="newRoomNumber" placeholder="e.g. 101" required>
+            <label>Room Type *</label>
+            <select id="newRoomType" required>
+                <option value="">Select type</option>
+                <option>Single</option><option>Double</option>
+                <option>Deluxe</option><option>Suite</option>
+            </select>
+            <label>Price per Night *</label>
+            <input type="number" id="newRoomPrice" placeholder="0.00" min="0" step="0.01" required>
+            <label>Floor</label>
+            <input type="number" id="newRoomFloor" placeholder="1" min="1" value="1">
+            <button type="submit" class="success" style="margin-top:var(--sp-4);">Add Room</button>
+        </form>
+
+        <form class="box" onsubmit="bulkAddRooms(event)">
+            <h3>Bulk Add Rooms</h3>
+            <div class="form-row">
+                <div>
+                    <label>Start Room *</label>
+                    <input type="number" id="bulkStart" placeholder="101" min="1" required>
+                </div>
+                <div>
+                    <label>End Room *</label>
+                    <input type="number" id="bulkEnd" placeholder="150" min="1" required>
+                </div>
+            </div>
+            <label>Room Type *</label>
+            <select id="bulkRoomType" required>
+                <option value="">Select type</option>
+                <option>Single</option><option>Double</option>
+                <option>Deluxe</option><option>Suite</option>
+            </select>
+            <label>Price per Night *</label>
+            <input type="number" id="bulkPrice" placeholder="0.00" min="0" step="0.01" required>
+            <label>Floor</label>
+            <input type="number" id="bulkFloor" placeholder="1" min="1" value="1">
+            <button type="submit" id="bulkSubmitBtn" style="margin-top:var(--sp-4);">Add Rooms</button>
+        </form>
+    </div>
+
+</main>
+
+<footer>© 2026 Hotel Management System</footer>
+
+<div class="modal-overlay" id="editRoomModal" onclick="if(event.target===this) closeRoomModal()">
+    <div class="modal-box" style="width:420px;">
+        <button class="modal-close" onclick="closeRoomModal()"><i class='bx bx-x'></i></button>
+        <h2>Edit Room</h2>
+        <p class="subtitle" id="editRoomSubtitle">Update room details</p>
+        <input type="hidden" id="editRoomId">
+        <div class="form-grid">
+            <div class="full-width">
+                <label>Status</label>
+                <select id="editRoomStatus">
+                    <option value="Available">Available</option>
+                    <option value="Occupied">Occupied</option>
+                    <option value="Cleaning">Cleaning</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Reserved">Reserved</option>
+                </select>
+            </div>
+            <div>
+                <label>Price per Night</label>
+                <input type="number" id="editRoomPrice" min="0" step="0.01" placeholder="0.00">
+            </div>
+            <div>
+                <label>Floor</label>
+                <input type="number" id="editRoomFloor" min="1">
+            </div>
+            <div class="full-width">
+                <label>Description</label>
+                <input type="text" id="editRoomDescription" placeholder="Optional notes">
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn-cancel" onclick="closeRoomModal()">Cancel</button>
+            <button type="button" onclick="saveRoomEdit()">Save Changes</button>
+        </div>
+    </div>
+</div>
+<!-- CONFIRM MODAL -->
+<div class="confirm-overlay" id="confirmModal">
+    <div class="confirm-box">
+        <div class="confirm-icon" id="confirmIcon">⚠️</div>
+        <div class="confirm-title" id="confirmTitle">Are you sure?</div>
+        <div class="confirm-message" id="confirmMessage"></div>
+        <div class="confirm-actions">
+            <button type="button" class="confirm-btn-cancel" onclick="closeConfirm()">Cancel</button>
+            <button type="button" id="confirmOkBtn" onclick="executeConfirm()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'script.js' %}"></script>
+</body>
+</html>

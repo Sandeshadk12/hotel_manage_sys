@@ -1,0 +1,163 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maintenance</title>
+<link rel="stylesheet" href="{% static 'style.css' %}">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+<body onload="loadMaintenance()">
+
+<!-- TOPBAR -->
+<header class="topbar">
+    <div class="left">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+    </div>
+    <div class="center"><h1 class="header"></h1></div>
+    <div class="right">
+        <button onclick="toggle()" id="userDisplay">{{ username }}</button>
+    </div>
+</header>
+
+<!-- USER POPUP -->
+<div class="user-popup" id="userPopup">
+    <div class="popup-header">
+        <div class="popup-name" id="popupUsername">{{ username }}</div>
+        <div class="popup-role" id="userRoleDisplay">{{ role }}</div>
+    </div>
+    <button onclick="logout()">🚪 Logout</button>
+</div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+    <div class="logo">HotelMS</div>
+    <div class="sidebar-role">{{ role|upper }}</div>
+    <a href="{% url 'dashboard' %}" >🏠 Dashboard</a>
+    <a href="{% url 'booking' %}"   >📅 Bookings</a>
+    <a href="{% url 'rooms' %}"     >🛏 Rooms</a>
+    <a href="{% url 'customers' %}" >👥 Customers</a>
+    <a href="{% url 'payments' %}"  >💳 Payments</a>
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'housekeeping' %}" >🧹 Housekeeping</a>
+    <a href="{% url 'complaints' %}"  >📢 Complaints</a>
+    <a href="{% url 'maintenance' %}" class="active">🔧 Maintenance</a>
+    <a href="{% url 'reviews' %}"     >⭐ Reviews</a>
+    <a href="{% url 'services' %}"    >🛎 Services</a>
+    {% if role == 'admin' or role == 'manager' %}
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'staff' %}"       >👔 Staff</a>
+    <a href="{% url 'settings' %}"    >⚙️ Settings</a>
+    {% endif %}
+    {% if role == 'admin' %}
+    <a href="{% url 'users' %}"       >👤 Manage Users</a>
+    {% endif %}
+</aside>
+
+<main class="main-content" id="mainContent">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h2>Maintenance</h2>
+            <p>Manage room maintenance requests and repairs</p>
+        </div>
+    </div>
+
+    <section class="cards">
+        <div class="card orange"><div class="card-icon">🔓</div><h3>Open</h3><p id="mntOpen">0</p></div>
+        <div class="card blue"><div class="card-icon">🔄</div><h3>In Progress</h3><p id="mntInProgress">0</p></div>
+        <div class="card green"><div class="card-icon">✅</div><h3>Completed</h3><p id="mntCompleted">0</p></div>
+        <div class="card red"><div class="card-icon">🚨</div><h3>Urgent</h3><p id="mntUrgent">0</p></div>
+    </section>
+
+    {% if role == 'admin' or role == 'manager' %}
+    <div class="box" style="margin-bottom:var(--sp-5);">
+        <h3>New Maintenance Request</h3>
+        <div class="form-row" style="margin-top:var(--sp-4);">
+            <div>
+                <label>Room Number *</label>
+                <input type="text" id="mntRoomNumber" placeholder="e.g. 101">
+            </div>
+            <div>
+                <label>Priority</label>
+                <select id="mntPriority">
+                    <option>Low</option><option selected>Medium</option>
+                    <option>High</option><option>Urgent</option>
+                </select>
+            </div>
+            <div class="span-2">
+                <label>Description *</label>
+                <textarea id="mntDescription" rows="3" placeholder="Describe what needs to be fixed..."></textarea>
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:var(--sp-2);margin-top:var(--sp-3);">
+            <input type="checkbox" id="mntMarkRoom" style="width:auto;min-height:auto;padding:0;">
+            <span style="font-size:13px;color:var(--text-secondary);">Mark room as Maintenance (unavailable)</span>
+        </div>
+        <button type="button" onclick="submitMaintenance()" class="danger" style="margin-top:var(--sp-4);max-width:220px;">Create Request</button>
+    </div>
+    {% endif %}
+
+    <div class="box">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-4);">
+            <h3 style="margin:0;">All Requests</h3>
+            <div class="filter-bar" style="margin:0;">
+                <button type="button" onclick="loadMaintenance('')"            class="filter-btn">All</button>
+                <button type="button" onclick="loadMaintenance('Open')"        class="filter-btn">Open</button>
+                <button type="button" onclick="loadMaintenance('In Progress')" class="filter-btn">In Progress</button>
+                <button type="button" onclick="loadMaintenance('Completed')"   class="filter-btn">Completed</button>
+            </div>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr><th>Room</th><th>Type/Floor</th><th>Priority</th><th>Description</th><th>Status</th><th>Created</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="maintenanceTableBody">
+                    <tr><td colspan="7" style="text-align:center;padding:var(--sp-8);opacity:.5;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<footer>© 2026 Hotel Management System</footer>
+
+<div class="modal-overlay" id="mntModal" onclick="if(event.target===this) closeMntModal()">
+    <div class="modal-box" style="width:400px;">
+        <button class="modal-close" onclick="closeMntModal()"><i class='bx bx-x'></i></button>
+        <h2>Update Request</h2>
+        <p class="subtitle" id="mntModalSubtitle"></p>
+        <input type="hidden" id="mntReqId">
+        <label>New Status</label>
+        <select id="mntNewStatus">
+            <option>Open</option><option>In Progress</option>
+            <option>Completed</option><option>Cancelled</option>
+        </select>
+        <div class="modal-actions">
+            <button type="button" class="btn-cancel" onclick="closeMntModal()">Cancel</button>
+            <button type="button" class="success" onclick="saveMntUpdate()">Save</button>
+        </div>
+    </div>
+</div>
+<!-- CONFIRM MODAL -->
+<div class="confirm-overlay" id="confirmModal">
+    <div class="confirm-box">
+        <div class="confirm-icon" id="confirmIcon">⚠️</div>
+        <div class="confirm-title" id="confirmTitle">Are you sure?</div>
+        <div class="confirm-message" id="confirmMessage"></div>
+        <div class="confirm-actions">
+            <button type="button" class="confirm-btn-cancel" onclick="closeConfirm()">Cancel</button>
+            <button type="button" id="confirmOkBtn" onclick="executeConfirm()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'script.js' %}"></script>
+</body>
+</html>

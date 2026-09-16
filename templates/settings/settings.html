@@ -1,0 +1,161 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings</title>
+<link rel="stylesheet" href="{% static 'style.css' %}">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+<body onload="loadSettings()">
+
+<header class="topbar">
+    <div class="left"><button class="menu-btn" onclick="toggleSidebar()">☰</button></div>
+    <div class="center"><h1 class="header"></h1></div>
+    <div class="right"><button onclick="toggle()" id="userDisplay">{{ username }}</button></div>
+</header>
+
+<div class="user-popup" id="userPopup">
+    <div class="popup-header">
+        <div class="popup-name" id="popupUsername">{{ username }}</div>
+        <div class="popup-role" id="userRoleDisplay">{{ role }}</div>
+    </div>
+    <button onclick="logout()">🚪 Logout</button>
+</div>
+
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+    <div class="logo">HotelMS</div>
+    <div class="sidebar-role">{{ role|upper }}</div>
+    <a href="{% url 'dashboard' %}">🏠 Dashboard</a>
+    <a href="{% url 'booking' %}">📅 Bookings</a>
+    <a href="{% url 'rooms' %}">🛏 Rooms</a>
+    <a href="{% url 'customers' %}">👥 Customers</a>
+    <a href="{% url 'payments' %}">💳 Payments</a>
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'housekeeping' %}">🧹 Housekeeping</a>
+    <a href="{% url 'complaints' %}">📢 Complaints</a>
+    <a href="{% url 'maintenance' %}">🔧 Maintenance</a>
+    <a href="{% url 'reviews' %}">⭐ Reviews</a>
+    <a href="{% url 'services' %}">🛎 Services</a>
+    {% if role == 'admin' or role == 'manager' %}
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'staff' %}">👔 Staff</a>
+    <a href="{% url 'settings' %}" class="active">⚙️ Settings</a>
+    {% endif %}
+    {% if role == 'admin' %}
+    <a href="{% url 'users' %}">👤 Manage Users</a>
+    {% endif %}
+</aside>
+
+<main class="main-content" id="mainContent">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h2>Settings</h2>
+            <p>Configure hotel information and system preferences</p>
+        </div>
+    </div>
+
+    <form onsubmit="saveSettings(event)">
+        <div class="grid">
+
+            <div class="box">
+                <h3>🏨 Hotel Information</h3>
+                <label>Hotel Name</label>
+                <input type="text" id="hotelName" placeholder="Grand Hotel">
+                <label>Email</label>
+                <input type="email" id="hotelEmail" placeholder="info@hotel.com">
+                <label>Phone</label>
+                <input type="text" id="hotelPhone" placeholder="+1-800-HOTEL">
+                <label>Address</label>
+                <input type="text" id="hotelAddress" placeholder="Street address">
+                <label>City</label>
+                <input type="text" id="hotelCity" placeholder="City">
+            </div>
+
+            <div class="box">
+                <h3>⚙️ System Configuration</h3>
+                <label>Currency</label>
+                <select id="currency">
+                    <option>USD ($)</option><option>NPR (रू)</option>
+                    <option>GBP (£)</option><option>INR (₹)</option>
+                    <option>EUR (€)</option>
+                </select>
+                <label>Currency Code</label>
+                <input type="text" id="currencyCode" placeholder="USD" maxlength="3">
+                <label>Time Zone</label>
+                <select id="timeZone">
+                    <option>UTC-5</option><option>UTC-8</option>
+                    <option>UTC+0</option><option>UTC+1</option>
+                    <option>UTC+5:30</option><option>UTC+5:45</option>
+                </select>
+                <label>Language</label>
+                <select id="language">
+                    <option>English</option><option>Spanish</option>
+                    <option>French</option><option>German</option>
+                </select>
+                <label>Date Format</label>
+                <select id="dateFormat">
+                    <option>MM/DD/YYYY</option><option>DD/MM/YYYY</option>
+                    <option>YYYY-MM-DD</option>
+                </select>
+            </div>
+
+            <div class="box">
+                <h3>📅 Booking Configuration</h3>
+                <label>Default Check-in Time</label>
+                <input type="time" id="checkInTime" value="15:00">
+                <label>Default Check-out Time</label>
+                <input type="time" id="checkOutTime" value="11:00">
+                <label>Cleaning Time (minutes)</label>
+                <input type="number" id="cleaningTime" placeholder="30" min="15" step="15">
+                <label>Base Rate per Night</label>
+                <input type="number" id="baseRate" placeholder="150" min="0" step="0.01">
+            </div>
+
+            <div class="box">
+                <h3>💳 Payment Configuration</h3>
+                <label>Payment Gateway</label>
+                <select id="paymentGateway">
+                    <option>Stripe</option><option>PayPal</option>
+                    <option>Square</option><option>Bank Transfer</option><option>Cash</option>
+                </select>
+                <label>Tax Rate (%)</label>
+                <input type="number" id="taxRate" placeholder="10" min="0" max="100" step="0.01">
+                <label>Payment Timeout (seconds)</label>
+                <input type="number" id="paymentTimeout" placeholder="3600" min="60" step="60">
+            </div>
+
+            <div class="box large">
+                <h3>💾 Save Changes</h3>
+                <div style="display:flex;gap:var(--sp-3);margin-top:var(--sp-2);">
+                    <button type="submit" class="success" style="max-width:200px;">✓ Save All Settings</button>
+                    <button type="button" onclick="resetSettings()" class="danger" style="max-width:200px;">↺ Reset to Defaults</button>
+                </div>
+            </div>
+
+        </div>
+    </form>
+
+</main>
+
+<footer>© 2026 Hotel Management System</footer>
+
+<div class="confirm-overlay" id="confirmModal">
+    <div class="confirm-box">
+        <div class="confirm-icon" id="confirmIcon">⚠️</div>
+        <div class="confirm-title" id="confirmTitle">Are you sure?</div>
+        <div class="confirm-message" id="confirmMessage"></div>
+        <div class="confirm-actions">
+            <button type="button" class="confirm-btn-cancel" onclick="closeConfirm()">Cancel</button>
+            <button type="button" id="confirmOkBtn" onclick="executeConfirm()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'script.js' %}"></script>
+</body>
+</html>

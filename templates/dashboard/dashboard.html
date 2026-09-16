@@ -1,0 +1,208 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard</title>
+<link rel="stylesheet" href="{% static 'style.css' %}">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+<body onload="loadDashboard()">
+
+<!-- TOPBAR -->
+<header class="topbar">
+    <div class="left">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+    </div>
+    <div class="center"><h1 class="header"></h1></div>
+    <div class="right">
+        <button onclick="toggle()" id="userDisplay">{{ username }}</button>
+    </div>
+</header>
+
+<!-- USER POPUP -->
+<div class="user-popup" id="userPopup">
+    <div class="popup-header">
+        <div class="popup-name" id="popupUsername">{{ username }}</div>
+        <div class="popup-role" id="userRoleDisplay">{{ role }}</div>
+    </div>
+    <button onclick="logout()">🚪 Logout</button>
+</div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+    <div class="logo">HotelMS</div>
+    <div class="sidebar-role">{{ role|upper }}</div>
+    <a href="{% url 'dashboard' %}" class="active">🏠 Dashboard</a>
+    <a href="{% url 'booking' %}"   >📅 Bookings</a>
+    <a href="{% url 'rooms' %}"     >🛏 Rooms</a>
+    <a href="{% url 'customers' %}" >👥 Customers</a>
+    <a href="{% url 'payments' %}"  >💳 Payments</a>
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'housekeeping' %}" >🧹 Housekeeping</a>
+    <a href="{% url 'complaints' %}"  >📢 Complaints</a>
+    <a href="{% url 'maintenance' %}" >🔧 Maintenance</a>
+    <a href="{% url 'reviews' %}"     >⭐ Reviews</a>
+    <a href="{% url 'services' %}"    >🛎 Services</a>
+    {% if role == 'admin' or role == 'manager' %}
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'staff' %}"       >👔 Staff</a>
+    <a href="{% url 'settings' %}"    >⚙️ Settings</a>
+    {% endif %}
+    {% if role == 'admin' %}
+    <a href="{% url 'users' %}"       >👤 Manage Users</a>
+    {% endif %}
+</aside>
+
+<main class="main-content" id="mainContent">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h2>Dashboard</h2>
+            <p>Welcome back, {{ username }}. Here's today's overview.</p>
+        </div>
+        <div class="page-header-actions">
+            <button onclick="redirectTo('booking')" class="success">+ New Booking</button>
+        </div>
+    </div>
+
+    <!-- STAT CARDS -->
+    <section class="cards">
+        <div class="card blue">
+            <div class="card-icon">🏨</div>
+            <h3>Total Rooms</h3>
+            <p id="totalRoomsCount">0</p>
+        </div>
+        <div class="card green">
+            <div class="card-icon">📅</div>
+            <h3>Bookings</h3>
+            <p id="totalBookingsCount">0</p>
+        </div>
+        <div class="card orange">
+            <div class="card-icon">👥</div>
+            <h3>Customers</h3>
+            <p id="totalGuestsCount">0</p>
+        </div>
+        <div class="card purple">
+            <div class="card-icon">💰</div>
+            <h3>Revenue</h3>
+            <p id="totalRevenueCount">0</p>
+        </div>
+        <div class="card yellow">
+            <div class="card-icon">🧹</div>
+            <h3>Needs Cleaning</h3>
+            <p id="cleaningRoomsCount">0</p>
+        </div>
+        <div class="card blue">
+            <div class="card-icon">📥</div>
+            <h3>Arrivals Today</h3>
+            <p id="arrivalsToday">0</p>
+        </div>
+        <div class="card pink" style="border-left-color:var(--pink);">
+            <div class="card-icon" style="background:rgba(244,114,182,0.12);color:var(--pink);">📤</div>
+            <h3>Departures Today</h3>
+            <p id="departuresToday">0</p>
+        </div>
+        <div class="card cyan" style="border-left-color:var(--cyan);">
+            <div class="card-icon" style="background:rgba(34,211,238,0.12);color:var(--cyan);">📊</div>
+            <h3>Occupancy</h3>
+            <p id="occupancyRate">0%</p>
+        </div>
+    </section>
+
+    <section class="grid">
+
+        <!-- RECENT BOOKINGS -->
+        <div class="box large">
+            <h3>📋 Recent Bookings</h3>
+            <div class="table-wrapper">
+                <table id="bookingsTable">
+                    <thead>
+                        <tr>
+                            <th>Guest</th>
+                            <th>Room</th>
+                            <th>Check-in</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="4" style="text-align:center;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ROOM STATUS -->
+        <div class="box large">
+            <h3>🏨 Room Status</h3>
+            <div class="progress">
+                <div class="progress-label"><span>Available</span><strong id="availableRoomsCount">0</strong></div>
+                <div class="bar"><div id="availableRoomsBar" style="width:0%"></div></div>
+            </div>
+            <div class="progress">
+                <div class="progress-label"><span>Occupied</span><strong id="occupiedRoomsCount">0</strong></div>
+                <div class="bar red"><div id="occupiedRoomsBar" style="width:0%"></div></div>
+            </div>
+            <div class="progress">
+                <div class="progress-label"><span>Cleaning</span><strong id="cleaningRoomsBarCount">0</strong></div>
+                <div class="bar yellow"><div id="cleaningRoomsBar" style="width:0%"></div></div>
+            </div>
+            <div class="progress">
+                <div class="progress-label"><span>Maintenance</span><strong id="maintenanceRoomsCount">0</strong></div>
+                <div class="bar orange"><div id="maintenanceRoomsBar" style="width:0%"></div></div>
+            </div>
+            <div class="progress" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+                <div class="progress-label">
+                    <span>Overall Occupancy</span>
+                    <strong id="occupancyRateBar" style="color:var(--green);">0%</strong>
+                </div>
+                <div class="bar blue"><div id="occupancyBarFill" style="width:0%"></div></div>
+            </div>
+        </div>
+
+        <!-- QUICK ACTIONS -->
+        <div class="box">
+            <h3>⚡ Quick Actions</h3>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+                <button onclick="redirectTo('booking')">📅 New Booking</button>
+                <button onclick="redirectTo('rooms')" class="secondary">🛏 Manage Rooms</button>
+                <button onclick="redirectTo('customers')" class="secondary">👥 View Customers</button>
+                <button onclick="window.location.href='/housekeeping/'" class="secondary">🧹 Housekeeping Board</button>
+            </div>
+        </div>
+
+        <!-- NOTIFICATIONS -->
+        <div class="box">
+            <h3>🔔 Notifications</h3>
+            <div id="dashboardNotifications" style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+                <p style="opacity:.5;font-size:13px;">Loading...</p>
+            </div>
+        </div>
+
+    </section>
+
+</main>
+
+<footer>© 2026 Hotel Management System</footer>
+
+
+<!-- CONFIRM MODAL -->
+<div class="confirm-overlay" id="confirmModal">
+    <div class="confirm-box">
+        <div class="confirm-icon" id="confirmIcon">⚠️</div>
+        <div class="confirm-title" id="confirmTitle">Are you sure?</div>
+        <div class="confirm-message" id="confirmMessage"></div>
+        <div class="confirm-actions">
+            <button type="button" class="confirm-btn-cancel" onclick="closeConfirm()">Cancel</button>
+            <button type="button" id="confirmOkBtn" onclick="executeConfirm()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'script.js' %}"></script>
+</body>
+</html>

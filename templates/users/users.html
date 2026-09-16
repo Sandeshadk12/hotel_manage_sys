@@ -1,0 +1,170 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Users</title>
+<link rel="stylesheet" href="{% static 'style.css' %}">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+<body onload="loadUsers()">
+
+<header class="topbar">
+    <div class="left"><button class="menu-btn" onclick="toggleSidebar()">☰</button></div>
+    <div class="center"><h1 class="header"></h1></div>
+    <div class="right"><button onclick="toggle()" id="userDisplay">{{ username }}</button></div>
+</header>
+
+<div class="user-popup" id="userPopup">
+    <div class="popup-header">
+        <div class="popup-name" id="popupUsername">{{ username }}</div>
+        <div class="popup-role" id="userRoleDisplay">{{ role }}</div>
+    </div>
+    <button onclick="logout()">🚪 Logout</button>
+</div>
+
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+    <div class="logo">HotelMS</div>
+    <div class="sidebar-role">{{ role|upper }}</div>
+    <a href="{% url 'dashboard' %}">🏠 Dashboard</a>
+    <a href="{% url 'booking' %}">📅 Bookings</a>
+    <a href="{% url 'rooms' %}">🛏 Rooms</a>
+    <a href="{% url 'customers' %}">👥 Customers</a>
+    <a href="{% url 'payments' %}">💳 Payments</a>
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'housekeeping' %}">🧹 Housekeeping</a>
+    <a href="{% url 'complaints' %}">📢 Complaints</a>
+    <a href="{% url 'maintenance' %}">🔧 Maintenance</a>
+    <a href="{% url 'reviews' %}">⭐ Reviews</a>
+    <a href="{% url 'services' %}">🛎 Services</a>
+    {% if role == 'admin' or role == 'manager' %}
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'staff' %}">👔 Staff</a>
+    <a href="{% url 'settings' %}">⚙️ Settings</a>
+    {% endif %}
+    {% if role == 'admin' %}
+    <a href="{% url 'users' %}" class="active">👤 Manage Users</a>
+    {% endif %}
+</aside>
+
+<main class="main-content" id="mainContent">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h2>Manage Users</h2>
+            <p>Staff accounts, roles and access control</p>
+        </div>
+        <div class="page-header-actions">
+            <button onclick="openAddUser()" class="success">+ Add User</button>
+        </div>
+    </div>
+
+    <section class="cards">
+        <div class="card blue"><div class="card-icon">👤</div><h3>Total Users</h3><p id="totalUsersCount">—</p></div>
+        <div class="card red"><div class="card-icon">🛡</div><h3>Admins</h3><p id="adminCount">—</p></div>
+        <div class="card orange"><div class="card-icon">👥</div><h3>Staff & Managers</h3><p id="staffCount">—</p></div>
+    </section>
+
+    <div class="table-container">
+        <div class="table-header">
+            <h3>All Users</h3>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th><th>Username</th><th>Email</th>
+                    <th>Role</th><th>Status</th><th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="usersTableBody">
+                <tr><td colspan="6" class="table-empty">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+</main>
+
+<footer>© 2026 Hotel Management System</footer>
+
+<!-- ADD USER MODAL -->
+<div class="modal-overlay" id="addUserModal">
+    <div class="modal-box" style="width:500px;">
+        <button class="modal-close" onclick="closeAddUser()"><i class='bx bx-x'></i></button>
+        <h2>Add New User</h2>
+        <p class="subtitle">Create a staff account with role-based access</p>
+        <div class="form-grid">
+            <div><label>First Name *</label><input type="text" id="au_first_name" placeholder="John"></div>
+            <div><label>Last Name</label><input type="text" id="au_last_name" placeholder="Doe"></div>
+            <div><label>Username *</label><input type="text" id="au_username" placeholder="johndoe"></div>
+            <div><label>Email *</label><input type="email" id="au_email" placeholder="john@hotel.com"></div>
+            <div><label>Password *</label><input type="password" id="au_password" placeholder="Min 6 characters"></div>
+            <div>
+                <label>Role *</label>
+                <select id="au_role">
+                    <option value="staff">Staff</option>
+                    <option value="manager">Manager</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+        </div>
+        <div id="addUserMsg"></div>
+        <div class="modal-actions">
+            <button type="button" class="btn-cancel" onclick="closeAddUser()">Cancel</button>
+            <button type="button" class="success" onclick="submitAddUser()">Create User</button>
+        </div>
+    </div>
+</div>
+
+<!-- EDIT USER MODAL -->
+<div class="modal-overlay" id="editUserModal">
+    <div class="modal-box" style="width:460px;">
+        <button class="modal-close" onclick="closeEditUser()"><i class='bx bx-x'></i></button>
+        <h2>Edit User</h2>
+        <input type="hidden" id="eu_id">
+        <div class="form-grid">
+            <div><label>First Name</label><input type="text" id="eu_first_name"></div>
+            <div><label>Last Name</label><input type="text" id="eu_last_name"></div>
+            <div class="full-width"><label>Email</label><input type="email" id="eu_email"></div>
+            <div>
+                <label>Role</label>
+                <select id="eu_role">
+                    <option value="staff">Staff</option>
+                    <option value="manager">Manager</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div>
+                <label>Status</label>
+                <select id="eu_is_active">
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                </select>
+            </div>
+        </div>
+        <div id="editUserMsg"></div>
+        <div class="modal-actions">
+            <button type="button" class="btn-cancel" onclick="closeEditUser()">Cancel</button>
+            <button type="button" class="success" onclick="submitEditUser()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="confirm-overlay" id="confirmModal">
+    <div class="confirm-box">
+        <div class="confirm-icon" id="confirmIcon">⚠️</div>
+        <div class="confirm-title" id="confirmTitle">Are you sure?</div>
+        <div class="confirm-message" id="confirmMessage"></div>
+        <div class="confirm-actions">
+            <button type="button" class="confirm-btn-cancel" onclick="closeConfirm()">Cancel</button>
+            <button type="button" id="confirmOkBtn" onclick="executeConfirm()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'script.js' %}"></script>
+</body>
+</html>

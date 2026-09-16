@@ -1,0 +1,51 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login</title>
+<link rel="stylesheet" href="{% static 'style.css' %}">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+<body class="login-page">
+
+<div class="login-container">
+    <form class="login-box" method="POST" action="{% url 'login' %}">
+        {% csrf_token %}
+
+        <div class="login-logo">
+            <h1 id="loginHotelName">🏨 Hotel</h1>
+            <p>Management System</p>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="login-error">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="input-box">
+            <input type="text" name="username" placeholder="Username" required autocomplete="username">
+            <i class='bx bxs-user'></i>
+        </div>
+
+        <div class="input-box">
+            <input type="password" name="password" id="password" placeholder="Password" required autocomplete="current-password">
+            <button type="button" class="toggle-password" onclick="togglePassword()">
+                <i class='bx bx-show'></i>
+            </button>
+        </div>
+
+        <div class="options">
+            <label><input type="checkbox"> Remember me</label>
+            <a href="#">Forgot password?</a>
+        </div>
+
+        <button type="submit" style="width:100%;margin-top:var(--sp-2);">Sign In</button>
+    </form>
+</div>
+
+<script src="{% static 'script.js' %}"></script>
+</body>
+</html>

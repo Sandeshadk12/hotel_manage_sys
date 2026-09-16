@@ -1,0 +1,159 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customers</title>
+<link rel="stylesheet" href="{% static 'style.css' %}">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+<body onload="loadCustomers()">
+
+<!-- TOPBAR -->
+<header class="topbar">
+    <div class="left">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+    </div>
+    <div class="center"><h1 class="header"></h1></div>
+    <div class="right">
+        <button onclick="toggle()" id="userDisplay">{{ username }}</button>
+    </div>
+</header>
+
+<!-- USER POPUP -->
+<div class="user-popup" id="userPopup">
+    <div class="popup-header">
+        <div class="popup-name" id="popupUsername">{{ username }}</div>
+        <div class="popup-role" id="userRoleDisplay">{{ role }}</div>
+    </div>
+    <button onclick="logout()">🚪 Logout</button>
+</div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+    <div class="logo">HotelMS</div>
+    <div class="sidebar-role">{{ role|upper }}</div>
+    <a href="{% url 'dashboard' %}" >🏠 Dashboard</a>
+    <a href="{% url 'booking' %}"   >📅 Bookings</a>
+    <a href="{% url 'rooms' %}"     >🛏 Rooms</a>
+    <a href="{% url 'customers' %}" class="active">👥 Customers</a>
+    <a href="{% url 'payments' %}"  >💳 Payments</a>
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'housekeeping' %}" >🧹 Housekeeping</a>
+    <a href="{% url 'complaints' %}"  >📢 Complaints</a>
+    <a href="{% url 'maintenance' %}" >🔧 Maintenance</a>
+    <a href="{% url 'reviews' %}"     >⭐ Reviews</a>
+    <a href="{% url 'services' %}"    >🛎 Services</a>
+    {% if role == 'admin' or role == 'manager' %}
+    <div class="sidebar-divider"></div>
+    <a href="{% url 'staff' %}"       >👔 Staff</a>
+    <a href="{% url 'settings' %}"    >⚙️ Settings</a>
+    {% endif %}
+    {% if role == 'admin' %}
+    <a href="{% url 'users' %}"       >👤 Manage Users</a>
+    {% endif %}
+</aside>
+
+<main class="main-content" id="mainContent">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h2>Customers</h2>
+            <p>Manage guest profiles and booking history</p>
+        </div>
+    </div>
+
+    <section class="cards">
+        <div class="card blue"><div class="card-icon">👥</div><h3>Total Customers</h3><p id="totalCustomers">0</p></div>
+        <div class="card green"><div class="card-icon">📅</div><h3>Active Bookings</h3><p id="activeBookings">0</p></div>
+        <div class="card purple"><div class="card-icon">💰</div><h3>Total Revenue</h3><p id="totalRevenue">0</p></div>
+        <div class="card yellow"><div class="card-icon">⭐</div><h3>Avg Rating</h3><p id="avgRating">0</p></div>
+    </section>
+
+    <div class="box" style="margin-bottom:var(--sp-5);">
+        <h3>Add New Customer</h3>
+        <div class="form-row" style="margin-top:var(--sp-4);">
+            <div><label>First Name *</label><input type="text" id="newFirstName" placeholder="First name"></div>
+            <div><label>Last Name *</label><input type="text" id="newLastName" placeholder="Last name"></div>
+            <div><label>Email *</label><input type="email" id="newEmail" placeholder="email@example.com"></div>
+            <div><label>Phone *</label><input type="text" id="newPhone" placeholder="Phone number"></div>
+            <div><label>Country</label><input type="text" id="newCountry" placeholder="Country"></div>
+            <div><label>Address</label><input type="text" id="newAddress" placeholder="Address"></div>
+        </div>
+        <button type="button" onclick="addCustomer()" class="success" style="margin-top:var(--sp-4);max-width:180px;">Add Customer</button>
+    </div>
+
+    <div class="box">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--sp-3);margin-bottom:var(--sp-4);">
+            <h3 style="margin:0;">All Customers</h3>
+            <div class="search-input-wrapper">
+                <input type="text" id="customerSearch" placeholder="Search name or email..." oninput="searchCustomers()" style="width:240px;">
+            </div>
+        </div>
+        <div class="table-wrapper">
+            <table id="customersTable">
+                <thead>
+                    <tr>
+                        <th>Name</th><th>Email</th><th>Phone</th>
+                        <th>Country</th><th>Bookings</th><th>Total Spent</th><th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="7" style="text-align:center;padding:var(--sp-8);opacity:.5;">Loading customers...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<footer>© 2026 Hotel Management System</footer>
+
+<div class="modal-overlay" id="customerModal" onclick="if(event.target===this) closeCustomerModal()">
+    <div class="modal-box" style="width:580px;">
+        <button class="modal-close" onclick="closeCustomerModal()"><i class='bx bx-x'></i></button>
+        <h2 id="modalCustomerName">Customer Details</h2>
+        <p class="subtitle" id="modalCustomerEmail"></p>
+        <div id="modalCustomerBody"></div>
+    </div>
+</div>
+<div class="modal-overlay" id="editCustomerModal" onclick="if(event.target===this) closeEditCustomerModal()">
+    <div class="modal-box" style="width:460px;">
+        <button class="modal-close" onclick="closeEditCustomerModal()"><i class='bx bx-x'></i></button>
+        <h2>Edit Customer</h2>
+        <input type="hidden" id="editCustomerId">
+        <div class="form-grid">
+            <div><label>First Name</label><input type="text" id="editFirstName"></div>
+            <div><label>Last Name</label><input type="text" id="editLastName"></div>
+            <div><label>Email</label><input type="email" id="editEmail"></div>
+            <div><label>Phone</label><input type="text" id="editPhone"></div>
+            <div><label>Country</label><input type="text" id="editCountry"></div>
+            <div><label>City</label><input type="text" id="editCity"></div>
+            <div class="full-width"><label>Address</label><input type="text" id="editAddress"></div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn-cancel" onclick="closeEditCustomerModal()">Cancel</button>
+            <button type="button" onclick="saveCustomerEdit()">Save Changes</button>
+        </div>
+    </div>
+</div>
+<!-- CONFIRM MODAL -->
+<div class="confirm-overlay" id="confirmModal">
+    <div class="confirm-box">
+        <div class="confirm-icon" id="confirmIcon">⚠️</div>
+        <div class="confirm-title" id="confirmTitle">Are you sure?</div>
+        <div class="confirm-message" id="confirmMessage"></div>
+        <div class="confirm-actions">
+            <button type="button" class="confirm-btn-cancel" onclick="closeConfirm()">Cancel</button>
+            <button type="button" id="confirmOkBtn" onclick="executeConfirm()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'script.js' %}"></script>
+</body>
+</html>
